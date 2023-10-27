@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Control Temperatura</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+
+
+    <style>
+        p {
+            color: gray;
+            /* Cambia el color del texto a gris */
+            font-family: 'Nunito', sans-serif;
+            /* Usa la fuente 'Nunito' de Google Fonts */
+        }
+
+        h1,
+        label {
+            font-family: 'Nunito', sans-serif;
+        }
+
+        .button-report {
+            font-family: 'Open Sans', sans-serif;
+            /* Utiliza la fuente de Google Fonts */
+            background-color: #007bff;
+            /* Color de fondo azul */
+            color: #fff;
+            /* Color del texto blanco */
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+        }
+
+        /* Estilo para el date picker */
+        .datepicker-d {
+            font-family: 'Open Sans', sans-serif;
+            /* Utiliza la fuente de Google Fonts */
+            border: 1px solid #ccc;
+            /* Borde gris */
+            padding: 5px;
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css?family=Nunito&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <h1>Control de temperatura</h1>
+    <p>Actualizacion de 16 segundos, objetivo: reportar temperatura mayor a 26</p>
+    <div>
+        <label for="fecha">crear reporte</label>
+        <input type="date" id="fecha" class="datepicker-d">
+        <button class="button-report" onclick="getTempByDay()">Reporte</button>
+    </div>
+
+    <div id="chart-container" style="float: left;">
+        <div id="chart"></div>
+        <div id="last-temperature" style="font-size: 79px;"></div>
+    </div>
+
+    <script type="text/javascript">
+        // Función para hacer una solicitud AJAX y obtener los datos de la gráfica
+        function fetchChart() {
+            fetch('/get_chart_data')
+                .then(response => response.json())
+                .then(data => {
+                    // Configura la gráfica con los datos obtenidos
+                    Plotly.newPlot('chart', data.data, data.layout);
+                })
+                .catch(error => console.error(error));
+        }
+
+        // Función para obtener el último valor de temperatura
+        function fetchLastTemperature() {
+            fetch('/get_last_temperature')
+                .then(response => response.json())
+                .then(data => {
+                    const lastTemperature = data.temperature;
+                    const lastTemperatureElement = document.getElementById('last-temperature');
+                    lastTemperatureElement.innerHTML = `Ultima temperatura: ${lastTemperature}°C`;
+
+                    // Condicional para el riesgo
+                    if (lastTemperature < 26) {
+                        lastTemperatureElement.style.color = 'green';
+                    } else {
+                        lastTemperatureElement.style.color = 'red';
+                        playAlertSound(); // Llama a la función para reproducir el sonido de alerta
+                    }
+                })
+                .catch(error => console.error(error));
+        }
+
+        // Función para reproducir el sonido de alerta
+        function playAlertSound() {
+            const audio = new Audio('/static/bPWaUIjwJ6Y_160.mp3'); // Reemplaza con la ruta a tu archivo de sonido
+            audio.play();
+        }
+
+        function getTempByDay() {
+            // Obtiene la fecha seleccionada del date picker
+            const fechaSeleccionada = document.getElementById("fecha").value;
+
+            // Realiza una solicitud GET al servidor con la fecha seleccionada como parámetro
+            fetch(`/get_temperature_by_date/${fechaSeleccionada}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('No se pudo obtener la temperatura por fecha');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Aquí puedes procesar los datos recibidos, por ejemplo, mostrarlos en tu página
+                    console.log("Se ejecuto correctamente");
+                })
+                .catch(error => {
+                    console.error(error);
+                });
+        }
+
+        /*function generarPDF() {
+            // Crear un nuevo objeto jsPDF
+            var doc = new jsPDF();
+
+            // Definir los datos para la tabla
+            var data = [
+                ["Nombre", "Edad", "Correo"],
+                ["Juan Pérez", "30", "juan@example.com"],
+                ["María Gómez", "25", "maria@example.com"],
+                ["Carlos López", "35", "carlos@example.com"]
+            ];
+
+            // Definir las opciones de la tabla
+            var options = {
+                theme: "striped",
+                styles: { fillColor: [100, 100, 255] }
+            };
+
+            // Agregar la tabla al documento PDF
+            doc.autoTable({
+                head: data[0],
+                body: data.slice(1),
+                startY: 20,
+                theme: "striped"
+            });
+
+            // Guardar o mostrar el PDF
+            doc.save("tabla.pdf");
+        }*/
+
+
+
+
+        // Llama a la función para cargar la gráfica inicialmente
+        fetchChart();
+
+        // Llama a la función para obtener el último valor de temperatura
+        fetchLastTemperature();
+
+        //Actualizar grafica y ultima temp cada 16 segundos
+        setInterval(fetchChart, 16000);
+        setInterval(fetchLastTemperature, 16000);  
+    </script>
+</body>
+
+</html>
